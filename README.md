@@ -15,7 +15,7 @@ requirements.txt          Python dependencies
 
 ## Run locally
 
-Use Python 3.10+ and Node.js 18+.
+Use Python 3.10+, Node.js 22+, and pnpm 11.25.0. The project pins its pnpm version in `frontend/package.json`.
 
 ### Start the API
 
@@ -35,12 +35,13 @@ The API listens on `http://127.0.0.1:8000`. Interactive API documentation is at 
 In a second terminal:
 
 ```powershell
+npm install --global pnpm@11.25.0
 cd frontend
-corepack pnpm install
-corepack pnpm dev
+pnpm install
+pnpm dev
 ```
 
-Open `http://127.0.0.1:5173`. To build the production frontend, run `corepack pnpm build` from `frontend/`. The API URL can be changed with `frontend/.env.local` using `VITE_API_BASE_URL=http://127.0.0.1:8000/api`.
+Open `http://127.0.0.1:5173`. To build the production frontend, run `pnpm build` from `frontend/`. The API URL can be changed with `frontend/.env.local` using `VITE_API_BASE_URL=http://127.0.0.1:8000/api`.
 
 ## Run tests
 
