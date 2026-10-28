@@ -3,6 +3,12 @@ __pycache__/
 .pytest_cache/
 .venv/
 venv/
+node_modules/
+dist/
+.pnpm-store/
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
 .env
 .streamlit/secrets.toml
 *.pem

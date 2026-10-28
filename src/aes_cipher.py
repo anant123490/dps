@@ -32,7 +32,10 @@ class AuthenticationError(ValueError):
 def _validate_passphrase(passphrase: str) -> bytes:
     if not isinstance(passphrase, str) or not passphrase:
         raise ValueError("Passphrase must be a non-empty string.")
-    return passphrase.encode("utf-8")
+    try:
+        return passphrase.encode("utf-8")
+    except UnicodeEncodeError as exc:
+        raise ValueError("Passphrase must contain valid Unicode text.") from exc
 
 
 def _b64encode(value: bytes) -> str:
@@ -63,7 +66,11 @@ def encrypt(plaintext: str, passphrase: str) -> str:
     nonce = get_random_bytes(NONCE_BYTES)
     key = _derive_key(password_bytes, salt, DEFAULT_ITERATIONS)
     cipher = AES.new(key, AES.MODE_GCM, nonce=nonce, mac_len=TAG_BYTES)
-    ciphertext, tag = cipher.encrypt_and_digest(plaintext.encode("utf-8"))
+    try:
+        message_bytes = plaintext.encode("utf-8")
+    except UnicodeEncodeError as exc:
+        raise ValueError("Plaintext must contain valid Unicode text.") from exc
+    ciphertext, tag = cipher.encrypt_and_digest(message_bytes)
 
     data = {
         "version": 1,

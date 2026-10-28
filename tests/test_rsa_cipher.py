@@ -59,6 +59,12 @@ def test_rsa_rejects_oversized_message(key_pair):
         encrypt("x" * (max_message_bytes(public_key) + 1), public_key)
 
 
+def test_rsa_rejects_empty_message(key_pair):
+    _, public_key = key_pair
+    with pytest.raises(RSAInputError, match="must not be empty"):
+        encrypt("", public_key)
+
+
 def test_rsa_rejects_malformed_ciphertext(key_pair):
     private_key, _ = key_pair
     with pytest.raises(RSAInputError, match="Base64"):

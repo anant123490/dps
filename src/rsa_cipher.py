@@ -95,8 +95,13 @@ def encrypt(plaintext: str, public_key: RSA.RsaKey) -> str:
     """Encrypt UTF-8 text with RSA-OAEP/SHA-256 and return standard Base64."""
     if not isinstance(plaintext, str):
         raise RSAInputError("Plaintext must be text.")
+    if not plaintext:
+        raise RSAInputError("Plaintext must not be empty.")
     _require_key_size(public_key)
-    message = plaintext.encode("utf-8")
+    try:
+        message = plaintext.encode("utf-8")
+    except UnicodeEncodeError as exc:
+        raise RSAInputError("Plaintext must contain valid Unicode text.") from exc
     limit = max_message_bytes(public_key)
     if len(message) > limit:
         raise RSAInputError(

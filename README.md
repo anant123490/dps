@@ -1,59 +1,83 @@
 # Cryptography Learning Toolkit
 
-A beginner-friendly Streamlit project for the college cryptography assignment. **Task 1** demonstrates the Caesar cipher and password-based AES-128-GCM. The existing **Task 2** RSA tools and numerical example remain accessible.
+An interactive college cryptography project with a React/Vite interface and a Python/FastAPI API. It demonstrates Caesar, password-based AES-128-GCM, RSA-OAEP, and a separate small-number RSA example.
 
-## Requirements
+## Project structure
 
-- Python 3.10 or newer
-- Dependencies listed in `requirements.txt`
+```text
+backend/                 FastAPI REST endpoints
+frontend/                React + Vite application and responsive CSS
+src/                      Reusable Caesar, AES, RSA, and numerical-demo modules
+tests/                    Pytest algorithm and API tests
+app.py                    Compatibility import for the FastAPI application
+requirements.txt          Python dependencies
+```
 
 ## Run locally
+
+Use Python 3.10+ and Node.js 18+.
+
+### Start the API
+
+From the project root, create and activate a virtual environment, install Python requirements, and run:
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
-streamlit run app.py
+python -m backend
 ```
 
-## Run the tests
+The API listens on `http://127.0.0.1:8000`. Interactive API documentation is at `http://127.0.0.1:8000/docs`.
+
+### Start the frontend
+
+In a second terminal:
 
 ```powershell
-python -m pytest
+cd frontend
+corepack pnpm install
+corepack pnpm dev
+```
+
+Open `http://127.0.0.1:5173`. To build the production frontend, run `corepack pnpm build` from `frontend/`. The API URL can be changed with `frontend/.env.local` using `VITE_API_BASE_URL=http://127.0.0.1:8000/api`.
+
+## Run tests
+
+From the project root with the virtual environment active:
+
+```powershell
+python -m pytest -q
 ```
 
 ## Features
 
 ### Task 1 — Classical and Symmetric Encryption
 
-- **Caesar Cipher:** shifts English letters using `E(x) = (x + k) mod 26` and `D(x) = (x - k) mod 26`, where `k` is 0–25. Letter case is preserved; spaces, punctuation, numbers, emoji, and non-English letters pass through unchanged. The page includes separate Encrypt and Decrypt buttons and the `HELLO`, shift 3 demonstration.
-- **AES-128-GCM:** encrypts UTF-8 text with AES-GCM. PBKDF2-HMAC-SHA-256 derives a 128-bit key from the entered passphrase. Each encryption creates a fresh 16-byte salt and 12-byte nonce; GCM produces a 16-byte authentication tag.
-
-#### AES payload format
-
-The copyable payload is `CLT1:` followed by URL-safe Base64-encoded compact JSON. Its fields are:
-
-| Field | Meaning |
-| --- | --- |
-| `version` | Payload version, currently `1` |
-| `kdf` | `PBKDF2-HMAC-SHA-256` |
-| `iterations` | PBKDF2 iteration count, currently `600000` |
-| `salt` | Standard Base64-encoded random 16-byte salt |
-| `nonce` | Standard Base64-encoded random 12-byte GCM nonce |
-| `ciphertext` | Standard Base64-encoded encrypted UTF-8 bytes |
-| `tag` | Standard Base64-encoded 16-byte GCM authentication tag |
-
-During decryption, the payload's salt and iteration count are used to derive the key again. GCM rejects a wrong passphrase or modified ciphertext/tag.
+- **Caesar Cipher:** Encrypts and decrypts with a shift from 0 to 25, keeping case and non-letter characters intact. The example uses `HELLO`, shift `3`, and produces `KHOOR`.
+- **AES-128-GCM:** Derives a 128-bit key from the passphrase with PBKDF2-HMAC-SHA-256, then encrypts UTF-8 text with authenticated AES-GCM. Every encryption creates a new 16-byte salt and 12-byte nonce. Wrong passphrases and modified payloads fail authentication.
+- **AES payload:** `CLT1:` followed by URL-safe Base64 JSON with version, KDF identifier, iteration count, salt, nonce, ciphertext, and GCM tag.
 
 ### Task 2 — Public-Key Cryptography
 
-- **RSA Key Generation:** securely generates 2048-bit or 3072-bit key pairs, displays/copies the public PEM, and downloads it on request. Private-key export requires confirmation and a user-supplied password; the downloaded key is password-protected PKCS#8 PEM.
-- **RSA Encryption:** accepts a public PEM key, validates it, shows the RSA-OAEP/SHA-256 UTF-8 byte limit, and encrypts without truncating messages.
-- **RSA Decryption:** imports a private PEM key (optionally password-protected) or uses a key generated in the current session. Invalid Base64 and decryption failures are shown as errors.
-- **RSA Numerical Example:** walks through `p=3`, `q=11`, `n=33`, `φ(n)=20`, `e=3`, `d=7`, `M=4`, including `gcd(e, φ(n)) = 1`, `(e × d) mod φ(n) = 1`, `C=31`, and recovery of `M=4`. This example is educational only and is never used by the real RSA implementation.
-- **Algorithm Explanation:** explains public/private keys, OAEP, RSA's short-message limit, and private-key handling.
-- **Algorithm Comparison:** compares Caesar and AES-128-GCM and retains a short reference to the Task 2 algorithms.
+- **RSA key generation:** Generates 2048-bit or 3072-bit RSA key pairs with PyCryptodome. Public PEM is shown and downloadable. Generated private keys remain in backend memory; an encrypted PKCS#8 export is only provided after explicit confirmation and a user-supplied password.
+- **RSA encryption/decryption:** Uses RSA-OAEP with SHA-256. Public and private PEM keys can be imported and validated. Ciphertext is standard Base64. The UI reports the plaintext size limit and rejects overlong messages without truncation.
+- **RSA numerical demonstration:** Walks through `p=3`, `q=11`, `n=33`, `φ(n)=20`, `e=3`, `d=7`, `M=4`, `C=31`, and recovery of `M=4`. The tiny values are educational only and are never used by RSA-OAEP.
+- **Learning and comparison:** Provides short explanations and a side-by-side algorithm comparison.
+
+## API endpoints
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/health` | Health check |
+| `POST` | `/api/caesar/encrypt`, `/api/caesar/decrypt` | Caesar operations |
+| `POST` | `/api/aes/encrypt`, `/api/aes/decrypt` | AES-GCM operations |
+| `POST` | `/api/rsa/keys` | Generate a key pair |
+| `POST` | `/api/rsa/validate-public`, `/api/rsa/validate-private` | Validate imported keys |
+| `POST` | `/api/rsa/encrypt`, `/api/rsa/decrypt` | RSA-OAEP operations |
+| `POST` | `/api/rsa/export-private` | Explicit password-protected export |
+| `GET` | `/api/rsa/demo` | Numerical example values |
 
 ## Security notes
 
-Caesar and the tiny numerical RSA example are insecure by design. AES-GCM and RSA-OAEP are implemented with PyCryptodome, but this application is a learning project, not a reviewed production cryptosystem. The toolkit does not store passwords or keys in project files; generated RSA private-key material is held in Streamlit session memory until reset or the session ends. Save exported keys securely and keep the export password separate.
+This is an educational application, not a production cryptosystem. Caesar and the small RSA example are intentionally insecure. The local API binds to loopback and does not persist generated private keys. AES and RSA use PyCryptodome; never reuse a GCM nonce with the same key or share private keys and passphrases. RSA is limited to short messages; production applications typically use hybrid encryption and reviewed key-management practices.
