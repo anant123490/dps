@@ -17,6 +17,10 @@ def test_aes_encryption_uses_fresh_random_values():
     first = encrypt("same", "secret")
     second = encrypt("same", "secret")
     assert first != second
+    first_data = _payload_data(first)
+    second_data = _payload_data(second)
+    assert first_data["salt"] != second_data["salt"]
+    assert first_data["nonce"] != second_data["nonce"]
 
 
 def test_aes_rejects_wrong_passphrase():
@@ -25,13 +29,14 @@ def test_aes_rejects_wrong_passphrase():
         decrypt(payload, "wrong password")
 
 
-def test_aes_rejects_tampered_ciphertext():
+@pytest.mark.parametrize("field", ["ciphertext", "tag"])
+def test_aes_rejects_tampered_ciphertext_or_tag(field):
     payload = encrypt("tamper me", "secret")
-    prefix, encoded = payload.split(":", 1)
-    data = json.loads(base64.urlsafe_b64decode(encoded))
-    ciphertext = bytearray(base64.b64decode(data["ciphertext"]))
-    ciphertext[0] ^= 1
-    data["ciphertext"] = base64.b64encode(ciphertext).decode("ascii")
+    prefix, _ = payload.split(":", 1)
+    data = _payload_data(payload)
+    changed = bytearray(base64.b64decode(data[field]))
+    changed[0] ^= 1
+    data[field] = base64.b64encode(changed).decode("ascii")
     modified = prefix + ":" + base64.urlsafe_b64encode(json.dumps(data).encode()).decode("ascii")
     with pytest.raises(AuthenticationError):
         decrypt(modified, "secret")
@@ -43,7 +48,17 @@ def test_aes_requires_nonempty_text_passphrase(passphrase):
         encrypt("hello", passphrase)
 
 
+def test_aes_rejects_empty_plaintext():
+    with pytest.raises(ValueError, match="empty"):
+        encrypt("", "secret")
+
+
 @pytest.mark.parametrize("payload", ["", "not a payload", "CLT1:!!!", "CLT2:abc"])
 def test_aes_rejects_malformed_or_unsupported_payload(payload):
     with pytest.raises(InvalidPayloadError):
         decrypt(payload, "secret")
+
+
+def _payload_data(payload):
+    _, encoded = payload.split(":", 1)
+    return json.loads(base64.urlsafe_b64decode(encoded))

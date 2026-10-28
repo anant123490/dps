@@ -11,6 +11,8 @@ def _validate_shift(shift: int) -> None:
 def _transform(text: str, shift: int) -> str:
     if not isinstance(text, str):
         raise ValueError("Text must be a string.")
+    if not text:
+        raise ValueError("Text must not be empty.")
     _validate_shift(shift)
 
     output: list[str] = []

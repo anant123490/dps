@@ -56,6 +56,8 @@ def encrypt(plaintext: str, passphrase: str) -> str:
     """Encrypt UTF-8 text and return a copyable ``CLT1:`` Base64 payload."""
     if not isinstance(plaintext, str):
         raise ValueError("Plaintext must be a string.")
+    if not plaintext:
+        raise ValueError("Plaintext must not be empty.")
     password_bytes = _validate_passphrase(passphrase)
     salt = get_random_bytes(SALT_BYTES)
     nonce = get_random_bytes(NONCE_BYTES)
