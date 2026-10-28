@@ -69,9 +69,9 @@ def export_private_key(key: RSA.RsaKey, export_password: str) -> str:
     """Export a private key as password-protected PKCS#8 PEM."""
     if not isinstance(export_password, str) or not export_password:
         raise RSAInputError("Set a non-empty export password to protect the private key file.")
+    _require_key_size(key)
     if not key.has_private():
         raise RSAInputError("A private RSA key is required for private-key export.")
-    _require_key_size(key)
     try:
         encoded = key.export_key(
             format="PEM",

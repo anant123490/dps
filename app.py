@@ -7,7 +7,14 @@ from src import aes_cipher, caesar_cipher, rsa_cipher, rsa_demo
 st.set_page_config(page_title="Cryptography Learning Toolkit", page_icon="🔐", layout="centered")
 
 TASK1_PAGES = ("Caesar Cipher", "AES-128-GCM")
-TASK2_PAGES = ("RSA", "RSA Numerical Demo", "Algorithm Comparison")
+TASK2_PAGES = (
+    "RSA Key Generation",
+    "RSA Encryption",
+    "RSA Decryption",
+    "RSA Numerical Example",
+    "Algorithm Explanation",
+    "Algorithm Comparison",
+)
 
 
 def _reset(prefix: str) -> None:
@@ -79,8 +86,8 @@ def _home() -> None:
     with task2:
         st.subheader("Task 2 — Public-Key Cryptography")
         st.write("The existing RSA key tools and numerical classroom demonstration remain available.")
-        st.button("Open RSA", key="home_rsa", on_click=_navigate, args=("RSA",), use_container_width=True)
-        st.button("Open RSA Numerical Demo", key="home_rsa_demo", on_click=_navigate, args=("RSA Numerical Demo",), use_container_width=True)
+        st.button("Open RSA Key Generation", key="home_rsa", on_click=_navigate, args=("RSA Key Generation",), use_container_width=True)
+        st.button("Open RSA Numerical Example", key="home_rsa_demo", on_click=_navigate, args=("RSA Numerical Example",), use_container_width=True)
     st.caption("Use the sidebar to open the algorithm comparison and move between all assignment pages.")
 
 
@@ -181,109 +188,72 @@ def _aes() -> None:
     st.button("Clear / Reset", on_click=_reset, args=("aes_",), key="aes_reset")
 
 
-def _rsa() -> None:
-    st.title("RSA-OAEP")
-    st.write("Use RSA-OAEP with SHA-256 for short messages. RSA is not designed to encrypt large files directly.")
+def _ensure_rsa_state() -> None:
+    st.session_state.setdefault("rsa_public_pem", "")
+    st.session_state.setdefault("rsa_active_private_pem", "")
+    st.session_state.setdefault("rsa_active_private_bits", 0)
+    st.session_state.setdefault("rsa_private_import_pem", "")
+    st.session_state.setdefault("rsa_public_key_input", st.session_state["rsa_public_pem"])
+    st.session_state.setdefault("rsa_decrypt_input", "")
 
-    if "rsa_public_pem_input" not in st.session_state:
-        st.session_state["rsa_public_pem_input"] = ""
-    if "rsa_active_private_pem" not in st.session_state:
-        st.session_state["rsa_active_private_pem"] = ""
-    if "rsa_private_import_pem" not in st.session_state:
-        st.session_state["rsa_private_import_pem"] = ""
 
-    col_size, col_button = st.columns([1, 1])
-    with col_size:
-        bits = st.selectbox("New key size", rsa_cipher.SUPPORTED_GENERATION_SIZES, format_func=lambda size: f"{size} bits", key="rsa_key_size")
-    with col_button:
-        st.write("")
-        if st.button("Generate key pair", type="primary", key="rsa_generate"):
-            try:
-                private_key, public_key = rsa_cipher.generate_key_pair(bits)
-                st.session_state["rsa_public_pem_input"] = rsa_cipher.export_public_key(public_key)
-                st.session_state["rsa_active_private_pem"] = private_key.export_key(format="PEM").decode("ascii")
-                st.session_state["rsa_private_import_pem"] = ""
-                st.success(f"Generated a {bits}-bit key pair in this browser session.")
-            except ValueError as error:
-                _show_error(error)
+def _clear_rsa_encryption() -> None:
+    for key in ("rsa_message", "rsa_ciphertext"):
+        st.session_state.pop(key, None)
 
-    public_pem = st.text_area("Public key (PEM)", height=130, key="rsa_public_pem_input", placeholder="Paste an RSA public key, or generate a key pair above.")
-    if st.button("Validate public key", key="rsa_validate_public"):
+
+def _clear_rsa_decryption() -> None:
+    for key in ("rsa_decrypt_input", "rsa_plaintext"):
+        st.session_state.pop(key, None)
+
+
+def _rsa_key_generation() -> None:
+    _ensure_rsa_state()
+    st.title("RSA Key Generation")
+    st.write("Generate a public/private key pair with PyCryptodome's secure random generator.")
+    bits = st.selectbox(
+        "RSA key size",
+        rsa_cipher.SUPPORTED_GENERATION_SIZES,
+        format_func=lambda size: f"{size} bits",
+        key="rsa_key_size",
+    )
+    if st.button("Generate key pair", type="primary", key="rsa_generate"):
         try:
-            parsed_public = rsa_cipher.import_public_key(public_pem)
-            st.success(f"Valid RSA public key ({parsed_public.size_in_bits()} bits).")
+            private_key, public_key = rsa_cipher.generate_key_pair(bits)
+            public_pem = rsa_cipher.export_public_key(public_key)
+            st.session_state["rsa_public_pem"] = public_pem
+            st.session_state["rsa_public_key_input"] = public_pem
+            st.session_state["rsa_active_private_pem"] = private_key.export_key(format="PEM").decode("ascii")
+            st.session_state["rsa_active_private_bits"] = private_key.size_in_bits()
+            st.session_state["rsa_active_private_source"] = "Generated"
+            st.session_state.pop("rsa_ciphertext", None)
+            st.session_state.pop("rsa_plaintext", None)
+            st.success(f"Generated a {bits}-bit RSA key pair. The private key is available in this session.")
         except ValueError as error:
             _show_error(error)
-    if public_pem:
-        try:
-            validated_public = rsa_cipher.import_public_key(public_pem)
-        except ValueError:
-            st.caption("Validate the PEM text to enable public-key download.")
-        else:
-            st.download_button(
-                "Download public key (PEM)",
-                data=rsa_cipher.export_public_key(validated_public),
-                file_name="cryptography-learning-toolkit-public-key.pem",
-                mime="application/x-pem-file",
-                key="rsa_public_download",
-            )
 
-    with st.expander("Import a private key for decryption or protected export"):
-        private_pem = st.text_area("Private key (PEM)", height=130, key="rsa_private_import_pem")
-        private_passphrase = st.text_input("Private key password (if protected)", type="password", key="rsa_private_import_password")
-        if st.button("Validate and use private key", key="rsa_validate_private"):
-            try:
-                private_key = rsa_cipher.import_private_key(private_pem, private_passphrase or None)
-                st.session_state["rsa_active_private_pem"] = private_key.export_key(format="PEM").decode("ascii")
-                st.success(f"Valid RSA private key ({private_key.size_in_bits()} bits); available in this session.")
-            except ValueError as error:
-                _show_error(error)
+    if st.session_state["rsa_public_pem"]:
+        st.subheader("Public key")
+        st.code(st.session_state["rsa_public_pem"], language=None)
+        st.download_button(
+            "Download public key (PEM)",
+            data=st.session_state["rsa_public_pem"],
+            file_name="cryptography-learning-toolkit-public-key.pem",
+            mime="application/x-pem-file",
+            key="rsa_public_download",
+        )
+    else:
+        st.info("Generate a key pair to display and export its public key.")
 
-    encrypt_tab, decrypt_tab, export_tab = st.tabs(["Encrypt", "Decrypt", "Export private key"])
-    with encrypt_tab:
-        message = st.text_area("Message to encrypt", height=110, key="rsa_message")
-        try:
-            public_key_for_size = rsa_cipher.import_public_key(public_pem) if public_pem else None
-            if public_key_for_size:
-                st.caption(f"Maximum message size with this key: {rsa_cipher.max_message_bytes(public_key_for_size)} UTF-8 bytes (OAEP/SHA-256).")
-        except ValueError:
-            public_key_for_size = None
-        if st.button("Encrypt with public key", type="primary", key="rsa_encrypt"):
-            if not message:
-                st.error("Enter a message first.")
-            else:
-                try:
-                    if public_key_for_size is None:
-                        raise rsa_cipher.RSAInputError("Enter or import a valid public key first.")
-                    st.session_state["rsa_ciphertext"] = rsa_cipher.encrypt(message, public_key_for_size)
-                except ValueError as error:
-                    _show_error(error)
-        if "rsa_ciphertext" in st.session_state:
-            st.markdown("**Ciphertext (Base64, copyable)**")
-            st.code(st.session_state["rsa_ciphertext"], language=None)
-
-    with decrypt_tab:
-        ciphertext = st.text_area("Ciphertext (Base64)", height=120, key="rsa_decrypt_input")
-        if st.button("Decrypt with private key", type="primary", key="rsa_decrypt"):
-            if not ciphertext:
-                st.error("Paste the Base64 ciphertext first.")
-            elif not st.session_state["rsa_active_private_pem"]:
-                st.error("Generate a key pair or import a private key first.")
-            else:
-                try:
-                    private_key = rsa_cipher.import_private_key(st.session_state["rsa_active_private_pem"])
-                    st.session_state["rsa_plaintext"] = rsa_cipher.decrypt(ciphertext, private_key)
-                except ValueError as error:
-                    _show_error(error)
-        if "rsa_plaintext" in st.session_state:
-            st.markdown("**Decrypted message**")
-            st.code(st.session_state["rsa_plaintext"], language=None)
-
-    with export_tab:
-        st.warning("A private key grants full access to messages encrypted for its matching public key. Store the downloaded file securely.")
+    if st.session_state["rsa_active_private_pem"]:
+        st.info(
+            f"A {st.session_state['rsa_active_private_bits']}-bit private key is loaded in this Streamlit session. "
+            "It is not displayed or written to project files."
+        )
+        st.warning("Keep private keys secret. A downloaded private-key file is protected with the password you choose below.")
         confirmed = st.checkbox("I understand and want to export the private key", key="rsa_export_confirm")
-        export_password = st.text_input("Password to encrypt the exported key", type="password", key="rsa_export_password")
-        if st.session_state["rsa_active_private_pem"] and confirmed and export_password:
+        export_password = st.text_input("Password to protect the exported key", type="password", key="rsa_export_password")
+        if confirmed and export_password:
             try:
                 active_key = rsa_cipher.import_private_key(st.session_state["rsa_active_private_pem"])
                 protected_pem = rsa_cipher.export_private_key(active_key, export_password)
@@ -296,28 +266,156 @@ def _rsa() -> None:
                 )
             except ValueError as error:
                 _show_error(error)
-        elif not st.session_state["rsa_active_private_pem"]:
-            st.caption("Generate a key pair or import a private key before exporting.")
         elif confirmed:
-            st.caption("Enter a password to protect the exported key file.")
-
+            st.caption("Enter a password to enable protected private-key export.")
     st.button("Reset RSA session", on_click=_reset, args=("rsa_",), key="rsa_reset")
 
 
-def _rsa_demo() -> None:
-    st.title("RSA Numerical Demo")
-    st.error("Educational only. These tiny values are insecure and must never be used to protect real data.")
-    values = rsa_demo.calculations()
-    st.markdown(
-        "For the classroom example, choose the supplied small primes and public exponent:\n\n"
-        "1. `p = 3`, `q = 11`\n"
-        "2. `n = p × q = 3 × 11 = 33`\n"
-        "3. `φ(n) = (p − 1)(q − 1) = 2 × 10 = 20`\n"
-        "4. `e = 3` and `d = 7`, because `e × d = 21 ≡ 1 (mod 20)`\n"
-        "5. With `M = 4`, encrypt: `C = Mᵉ mod n = 4³ mod 33 = 64 mod 33 = 31`\n"
-        "6. Decrypt: `Cᵈ mod n = 31⁷ mod 33 = 4`"
+def _rsa_encryption() -> None:
+    _ensure_rsa_state()
+    st.title("RSA Encryption")
+    st.write("Encrypt a short message with the recipient's public key using RSA-OAEP and SHA-256.")
+    public_pem = st.text_area(
+        "Public key (PEM)",
+        height=150,
+        key="rsa_public_key_input",
+        placeholder="Generate a key pair or paste a public key in PEM format.",
     )
-    st.success(f"Verification: C = {values['ciphertext']}; decrypted M = {values['decrypted']}; matches original: {values['verified']}.")
+    public_key = None
+    if public_pem:
+        try:
+            public_key = rsa_cipher.import_public_key(public_pem)
+            limit = rsa_cipher.max_message_bytes(public_key)
+            st.caption(f"Valid {public_key.size_in_bits()}-bit public key. OAEP/SHA-256 limit: {limit} UTF-8 bytes.")
+        except ValueError:
+            st.caption("The public key has not been validated yet. Use the button below to check it.")
+    if st.button("Validate public key", key="rsa_validate_public"):
+        try:
+            public_key = rsa_cipher.import_public_key(public_pem)
+            st.session_state["rsa_public_pem"] = rsa_cipher.export_public_key(public_key)
+            st.success(f"Valid RSA public key ({public_key.size_in_bits()} bits).")
+        except ValueError as error:
+            _show_error(error)
+
+    st.info("RSA-OAEP cannot encrypt large messages. This app shows the exact UTF-8 byte limit and never truncates the input.")
+    message = st.text_area("Plaintext message", height=120, key="rsa_message", placeholder="Enter a short message…")
+    if st.button("Encrypt with public key", type="primary", key="rsa_encrypt"):
+        st.session_state.pop("rsa_ciphertext", None)
+        if not message:
+            st.error("Enter a message before encrypting.")
+        else:
+            try:
+                public_key = rsa_cipher.import_public_key(public_pem)
+                st.session_state["rsa_ciphertext"] = rsa_cipher.encrypt(message, public_key)
+                st.session_state["rsa_public_pem"] = rsa_cipher.export_public_key(public_key)
+            except ValueError as error:
+                _show_error(error)
+    if "rsa_ciphertext" in st.session_state:
+        st.markdown("**Ciphertext (Base64, copyable)**")
+        st.code(st.session_state["rsa_ciphertext"], language=None)
+    st.button("Clear encryption fields", on_click=_clear_rsa_encryption, key="rsa_clear_encrypt")
+
+
+def _rsa_decryption() -> None:
+    _ensure_rsa_state()
+    st.title("RSA Decryption")
+    st.write("Recover a message with the matching private key. Decryption uses the same OAEP/SHA-256 parameters as encryption.")
+    if st.session_state["rsa_active_private_pem"]:
+        st.success(
+            f"Private key loaded: {st.session_state['rsa_active_private_bits']} bits "
+            f"({st.session_state.get('rsa_active_private_source', 'Imported')})."
+        )
+    else:
+        st.info("Generate a key pair on the RSA Key Generation page, or import the matching private key below.")
+
+    with st.expander("Import a private key"):
+        private_pem = st.text_area("Private key (PEM)", height=150, key="rsa_private_import_pem")
+        private_passphrase = st.text_input("Private-key password (if protected)", type="password", key="rsa_private_import_password")
+        if st.button("Validate and use private key", key="rsa_validate_private"):
+            try:
+                private_key = rsa_cipher.import_private_key(private_pem, private_passphrase or None)
+                st.session_state["rsa_active_private_pem"] = private_key.export_key(format="PEM").decode("ascii")
+                st.session_state["rsa_active_private_bits"] = private_key.size_in_bits()
+                st.session_state["rsa_active_private_source"] = "Imported"
+                matching_public_pem = rsa_cipher.export_public_key(private_key)
+                st.session_state["rsa_public_pem"] = matching_public_pem
+                st.session_state["rsa_public_key_input"] = matching_public_pem
+                st.session_state.pop("rsa_plaintext", None)
+                st.success(f"Valid {private_key.size_in_bits()}-bit private key loaded for this session.")
+            except ValueError as error:
+                _show_error(error)
+
+    ciphertext = st.text_area(
+        "Ciphertext (standard Base64)",
+        height=130,
+        key="rsa_decrypt_input",
+        placeholder="Paste the complete ciphertext produced by RSA Encryption.",
+    )
+    if st.button("Decrypt with private key", type="primary", key="rsa_decrypt"):
+        st.session_state.pop("rsa_plaintext", None)
+        if not ciphertext.strip():
+            st.error("Paste the Base64 ciphertext before decrypting.")
+        elif not st.session_state["rsa_active_private_pem"]:
+            st.error("Generate or import a private key before decrypting.")
+        else:
+            try:
+                private_key = rsa_cipher.import_private_key(st.session_state["rsa_active_private_pem"])
+                st.session_state["rsa_plaintext"] = rsa_cipher.decrypt(ciphertext, private_key)
+            except ValueError as error:
+                _show_error(error)
+    if "rsa_plaintext" in st.session_state:
+        st.markdown("**Recovered plaintext**")
+        st.code(st.session_state["rsa_plaintext"], language=None)
+    st.button("Clear decryption fields", on_click=_clear_rsa_decryption, key="rsa_clear_decrypt")
+
+
+def _rsa_numerical_example() -> None:
+    st.title("RSA Numerical Example")
+    st.warning("Educational only: these tiny numbers are insecure and must never be used for real encryption.")
+    values = rsa_demo.calculations()
+    st.subheader("1. Choose the small primes")
+    st.markdown("`p = 3`, `q = 11`. These are deliberately tiny for hand calculation.")
+    st.subheader("2. Calculate n and φ(n)")
+    st.latex(r"n = p \times q = 3 \times 11 = 33")
+    st.latex(r"\varphi(n) = (p - 1)(q - 1) = 2 \times 10 = 20")
+    st.subheader("3. Check the public exponent and private exponent")
+    st.latex(r"\gcd(e, \varphi(n)) = \gcd(3, 20) = 1")
+    st.write("Because the greatest common divisor is 1, `e = 3` is relatively prime to `φ(n) = 20`.")
+    st.latex(r"(e \times d) \bmod \varphi(n) = (3 \times 7) \bmod 20 = 21 \bmod 20 = 1")
+    st.write("Therefore `d = 7` is the modular inverse of `e = 3` modulo 20.")
+    st.subheader("4. Encrypt the message number M = 4")
+    st.latex(r"C = M^e \bmod n = 4^3 \bmod 33 = 64 \bmod 33 = 31")
+    st.subheader("5. Decrypt C = 31")
+    st.latex(r"M = C^d \bmod n = 31^7 \bmod 33")
+    st.write("Since `31 ≡ -2 (mod 33)`, `31⁷ ≡ (-2)⁷ = -128 ≡ 4 (mod 33)`. The recovered number is the original `M = 4`.")
+    st.success(
+        f"Verified: gcd(e, φ(n)) = {values['gcd_e_phi']}; (e × d) mod φ(n) = {values['ed_mod_phi']}; "
+        f"ciphertext C = {values['ciphertext']}; decrypted M = {values['decrypted']}."
+    )
+
+
+def _rsa_explanation() -> None:
+    st.title("Algorithm Explanation")
+    st.write("RSA is a public-key cryptosystem: the public key can be shared, while the private key must remain secret.")
+    st.subheader("Key generation")
+    st.markdown(
+        "1. A trusted cryptographic library securely generates two large prime numbers.\n"
+        "2. It computes the modulus `n` and the public and private exponents.\n"
+        "3. The public key contains `(n, e)`; the private key contains secret values needed for decryption."
+    )
+    st.subheader("Encryption and decryption")
+    st.markdown(
+        "- **Encrypt:** the sender uses the recipient's public key and RSA-OAEP with SHA-256.\n"
+        "- **Decrypt:** only the matching private key can recover the message using the same OAEP parameters.\n"
+        "- OAEP randomizes encryption and adds padding, so the same message does not produce a fixed ciphertext."
+    )
+    st.subheader("Why the message must be short")
+    st.latex(r"\text{maximum message bytes} = k - 2h_{Len} - 2")
+    st.write("Here `k` is the RSA modulus length in bytes and `hLen = 32` for SHA-256. This gives 190 bytes for a 2048-bit key and 318 bytes for a 3072-bit key.")
+    st.info("RSA is for short messages or key transport, not large files. Real systems commonly use hybrid encryption: a symmetric cipher protects the data and RSA protects a short symmetric key.")
+    st.subheader("Keep private keys safe")
+    st.write("Do not share a private key. This app keeps the active key in the current Streamlit session, does not display it, and only offers downloads as password-protected PKCS#8 PEM after explicit confirmation.")
+    st.warning("The numerical example uses tiny values only to demonstrate arithmetic. It is completely separate from the real RSA-OAEP implementation.")
 
 
 def _comparison() -> None:
@@ -374,7 +472,10 @@ with st.sidebar:
     "Home": _home,
     "Caesar Cipher": _caesar,
     "AES-128-GCM": _aes,
-    "RSA": _rsa,
-    "RSA Numerical Demo": _rsa_demo,
+    "RSA Key Generation": _rsa_key_generation,
+    "RSA Encryption": _rsa_encryption,
+    "RSA Decryption": _rsa_decryption,
+    "RSA Numerical Example": _rsa_numerical_example,
+    "Algorithm Explanation": _rsa_explanation,
     "Algorithm Comparison": _comparison,
 }[st.session_state["current_page"]]()

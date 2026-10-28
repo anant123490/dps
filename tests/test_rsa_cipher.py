@@ -67,6 +67,19 @@ def test_rsa_rejects_malformed_ciphertext(key_pair):
         decrypt("YQ==", private_key)
 
 
+def test_rsa_rejects_ciphertext_with_wrong_private_key(key_pair):
+    _, public_key = key_pair
+    wrong_private_key, _ = generate_key_pair(2048)
+    ciphertext = encrypt("message for the first key", public_key)
+    with pytest.raises(RSAInputError, match="invalid or was made for a different key"):
+        decrypt(ciphertext, wrong_private_key)
+
+
+def test_rsa_rejects_invalid_public_key():
+    with pytest.raises(RSAInputError, match="Could not read"):
+        import_public_key("not a PEM key")
+
+
 def test_rsa_requires_export_password(key_pair):
     private_key, _ = key_pair
     with pytest.raises(RSAInputError, match="export password"):

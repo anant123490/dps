@@ -47,8 +47,11 @@ During decryption, the payload's salt and iteration count are used to derive the
 
 ### Task 2 — Public-Key Cryptography
 
-- **RSA:** generates 2048-bit or 3072-bit key pairs, imports public or private PEM keys, encrypts short UTF-8 messages with RSA-OAEP/SHA-256, and exports private keys only as password-protected PKCS#8 PEM after an explicit in-app action.
-- **RSA Numerical Demo:** demonstrates the specified `p=3`, `q=11`, `n=33`, `φ(n)=20`, `e=3`, `d=7`, `M=4` calculation. It is educational only.
+- **RSA Key Generation:** securely generates 2048-bit or 3072-bit key pairs, displays/copies the public PEM, and downloads it on request. Private-key export requires confirmation and a user-supplied password; the downloaded key is password-protected PKCS#8 PEM.
+- **RSA Encryption:** accepts a public PEM key, validates it, shows the RSA-OAEP/SHA-256 UTF-8 byte limit, and encrypts without truncating messages.
+- **RSA Decryption:** imports a private PEM key (optionally password-protected) or uses a key generated in the current session. Invalid Base64 and decryption failures are shown as errors.
+- **RSA Numerical Example:** walks through `p=3`, `q=11`, `n=33`, `φ(n)=20`, `e=3`, `d=7`, `M=4`, including `gcd(e, φ(n)) = 1`, `(e × d) mod φ(n) = 1`, `C=31`, and recovery of `M=4`. This example is educational only and is never used by the real RSA implementation.
+- **Algorithm Explanation:** explains public/private keys, OAEP, RSA's short-message limit, and private-key handling.
 - **Algorithm Comparison:** compares Caesar and AES-128-GCM and retains a short reference to the Task 2 algorithms.
 
 ## Security notes
