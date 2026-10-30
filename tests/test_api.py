@@ -29,29 +29,34 @@ def test_api_rejects_empty_text_and_out_of_range_shift():
     assert client.post("/api/caesar/encrypt", json={"text": "abc", "shift": True}).status_code == 422
 
 
-def test_aes_encrypt_decrypt_and_reject_wrong_password():
-    encrypted = client.post("/api/aes/encrypt", json={"plaintext": "Secure 🌍 text", "password": "right password"})
+def test_des_encrypt_decrypt_and_reject_wrong_password():
+    encrypted = client.post("/api/des/encrypt", json={"plaintext": "Secure 🌍 text", "password": "right password"})
     assert encrypted.status_code == 200
     payload = encrypted.json()["payload"]
-    decrypted = client.post("/api/aes/decrypt", json={"payload": payload, "password": "right password"})
+    assert payload.startswith("DES1:")
+    decrypted = client.post("/api/des/decrypt", json={"payload": payload, "password": "right password"})
     assert decrypted.json()["plaintext"] == "Secure 🌍 text"
-    wrong_password = client.post("/api/aes/decrypt", json={"payload": payload, "password": "wrong password"})
+    wrong_password = client.post("/api/des/decrypt", json={"payload": payload, "password": "wrong password"})
     assert wrong_password.status_code == 400
     assert "Authentication failed" in wrong_password.json()["detail"]
 
 
-def test_aes_rejects_empty_and_tampered_payload():
-    assert client.post("/api/aes/encrypt", json={"plaintext": "", "password": "pass"}).status_code == 400
-    payload = client.post("/api/aes/encrypt", json={"plaintext": "text", "password": "pass"}).json()["payload"]
+def test_des_rejects_empty_and_tampered_payload():
+    assert client.post("/api/des/encrypt", json={"plaintext": "", "password": "pass"}).status_code == 400
+    payload = client.post("/api/des/encrypt", json={"plaintext": "text", "password": "pass"}).json()["payload"]
     tampered = payload[:-1] + ("A" if payload[-1] != "A" else "B")
-    response = client.post("/api/aes/decrypt", json={"payload": tampered, "password": "pass"})
+    response = client.post("/api/des/decrypt", json={"payload": tampered, "password": "pass"})
     assert response.status_code == 400
 
 
-def test_aes_encryption_uses_fresh_random_salt_and_nonce():
-    first = client.post("/api/aes/encrypt", json={"plaintext": "same", "password": "same password"}).json()["payload"]
-    second = client.post("/api/aes/encrypt", json={"plaintext": "same", "password": "same password"}).json()["payload"]
+def test_des_encryption_uses_fresh_random_salt_and_iv():
+    first = client.post("/api/des/encrypt", json={"plaintext": "same", "password": "same password"}).json()["payload"]
+    second = client.post("/api/des/encrypt", json={"plaintext": "same", "password": "same password"}).json()["payload"]
     assert first != second
+
+
+def test_aes_endpoints_are_removed():
+    assert client.post("/api/aes/encrypt", json={"plaintext": "text", "password": "pass"}).status_code == 404
 
 
 @pytest.fixture(scope="module")

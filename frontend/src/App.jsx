@@ -14,7 +14,7 @@ const navGroups = [
     items: [
       { to: '/task-1', label: 'Overview', icon: BookOpen, end: true },
       { to: '/caesar', label: 'Caesar Cipher', icon: ArrowDownUp },
-      { to: '/aes', label: 'AES-128-GCM', icon: LockKeyhole },
+      { to: '/des', label: 'DES Encryption', icon: LockKeyhole },
     ],
   },
   {
@@ -51,7 +51,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/task-1" element={<TaskOverview task={1} />} />
           <Route path="/caesar" element={<CaesarPage />} />
-          <Route path="/aes" element={<AESPage />} />
+          <Route path="/des" element={<DESPage />} />
           <Route path="/task-2" element={<TaskOverview task={2} />} />
           <Route path="/rsa/keys" element={<RSAKeysPage />} />
           <Route path="/rsa/encrypt" element={<RSAEncryptPage />} />
@@ -152,8 +152,8 @@ function Home() {
       <Link className="track-card task-one" to="/task-1">
         <div className="track-top"><span className="track-number">TASK 01</span><span className="track-icon"><ArrowDownUp size={20} /></span></div>
         <h3>Classical &amp;<br />Symmetric Encryption</h3>
-        <p>From letter substitution to authenticated encryption. Explore shared-key approaches across two eras.</p>
-        <div className="track-tags"><span>CAESAR CIPHER</span><span>AES-128-GCM</span></div>
+        <p>From letter substitution to a historical block cipher. Explore how shared-key methods developed and why DES is obsolete.</p>
+        <div className="track-tags"><span>CAESAR CIPHER</span><span>DES-CBC</span></div>
         <div className="track-open">Explore track <ArrowRight size={16} /></div>
       </Link>
       <Link className="track-card task-two" to="/task-2">
@@ -171,7 +171,7 @@ function Home() {
 function TaskOverview({ task }) {
   const isOne = task === 1
   const items = isOne
-    ? [{ to: '/caesar', icon: ArrowDownUp, name: 'Caesar Cipher', text: 'A shift substitution cipher to understand the fundamentals of encryption.', meta: 'CLASSICAL · SYMMETRIC' }, { to: '/aes', icon: LockKeyhole, name: 'AES-128-GCM', text: 'Authenticated encryption with a password-derived key and a portable payload.', meta: 'MODERN · SYMMETRIC' }]
+    ? [{ to: '/caesar', icon: ArrowDownUp, name: 'Caesar Cipher', text: 'A shift substitution cipher to understand the fundamentals of encryption.', meta: 'CLASSICAL · SYMMETRIC' }, { to: '/des', icon: LockKeyhole, name: 'DES Encryption', text: 'Explore the classic block cipher with authenticated, versioned ciphertext payloads.', meta: 'HISTORICAL · SYMMETRIC' }]
     : [{ to: '/rsa/keys', icon: KeyRound, name: 'RSA Key Generation', text: 'Create a secure 2048-bit or 3072-bit public/private key pair.', meta: 'KEY MANAGEMENT' }, { to: '/rsa/encrypt', icon: LockKeyhole, name: 'RSA-OAEP Encryption', text: 'Encrypt short messages with a public key and SHA-256 OAEP padding.', meta: 'PUBLIC-KEY ENCRYPTION' }, { to: '/rsa/decrypt', icon: UnlockKeyhole, name: 'RSA-OAEP Decryption', text: 'Recover text with the matching private key.', meta: 'PRIVATE-KEY DECRYPTION' }, { to: '/rsa/demo', icon: Fingerprint, name: 'Numerical Example', text: 'Walk through the small-number textbook calculation by hand.', meta: 'EDUCATIONAL ONLY' }]
   return <div className="page-content">
     <PageHeader eyebrow={`ASSIGNMENT TASK 0${task}`} title={isOne ? 'Classical & Symmetric Encryption' : 'Public-Key Cryptography'} description={isOne ? 'Compare a simple historical cipher with modern authenticated encryption.' : 'Explore public/private key workflows and the math behind RSA.'} icon={isOne ? ArrowDownUp : KeyRound} />
@@ -218,7 +218,7 @@ function CaesarPage() {
   </div>
 }
 
-function AESPage() {
+function DESPage() {
   const [mode, setMode] = useState('encrypt')
   const [plaintext, setPlaintext] = useState('')
   const [password, setPassword] = useState('')
@@ -233,38 +233,38 @@ function AESPage() {
     if (!plaintext.length) return setError('Enter a message before encrypting.')
     if (!password) return setError('Enter a passphrase before encrypting.')
     setBusy(true)
-    try { const result = await api('/aes/encrypt', { plaintext, password }); setPayload(result.payload); setSuccess('Message encrypted and authenticated successfully.') }
+    try { const result = await api('/des/encrypt', { plaintext, password }); setPayload(result.payload); setSuccess('Message encrypted and authenticated successfully.') }
     catch (e) { setError(e.message) } finally { setBusy(false) }
   }
   const runDecrypt = async () => {
     setError(''); setSuccess(''); setRecovered('')
-    if (!payload.trim()) return setError('Paste an AES payload before decrypting.')
+    if (!payload.trim()) return setError('Paste a DES payload before decrypting.')
     if (!password) return setError('Enter the passphrase used for encryption.')
     setBusy(true)
-    try { const result = await api('/aes/decrypt', { payload, password }); setRecovered(result.plaintext); setSuccess('Authentication passed. The original message was recovered.') }
+    try { const result = await api('/des/decrypt', { payload, password }); setRecovered(result.plaintext); setSuccess('Authentication passed. The original message was recovered.') }
     catch (e) { setError(e.message) } finally { setBusy(false) }
   }
   const reset = () => { setPlaintext(''); setPassword(''); setPayload(''); setRecovered(''); setError(''); setSuccess(''); setMode('encrypt') }
   return <div className="page-content">
-    <PageHeader eyebrow="TASK 01 / MODERN SYMMETRIC" title="AES-128-GCM" description="Authenticated encryption that protects both your message and its integrity." icon={LockKeyhole} />
-    <div className="crypto-info"><div className="crypto-info-icon"><ShieldCheck size={18} /></div><div><strong>Confidentiality + authentication</strong><p>AES-GCM encrypts the message and checks that the ciphertext has not been altered. A new random salt and nonce are created for every encryption.</p></div><span className="crypto-badge">AES · 128 BIT</span></div>
+    <PageHeader eyebrow="TASK 01 / HISTORICAL SYMMETRIC" title="DES Encryption and Decryption" description="Study the classic DES block cipher in CBC mode with password-derived keys and an authentication check." icon={LockKeyhole} />
+    <div className="warning-strip prominent"><span className="warning-mark">!</span><span><strong>DES is obsolete and insecure.</strong> Its 64-bit block and 56 effective key bits make it unsuitable for real data. Use this tool for learning only; authentication detects payload edits but does not make DES secure.</span></div>
     <div className="tabs"><button className={mode === 'encrypt' ? 'tab active' : 'tab'} onClick={() => { setMode('encrypt'); setError(''); setSuccess('') }}><LockKeyhole size={15} /> Encrypt</button><button className={mode === 'decrypt' ? 'tab active' : 'tab'} onClick={() => { setMode('decrypt'); setError(''); setSuccess('') }}><UnlockKeyhole size={15} /> Decrypt</button><button className="tab-reset" onClick={reset}>Clear / Reset</button></div>
-    <div className="panel aes-panel">
+    <div className="panel des-panel">
       {mode === 'encrypt' ? <><div className="panel-title"><div><span className="eyebrow">ENCRYPT A MESSAGE</span><h2>Protect your text</h2></div><span className="small-lock"><LockKeyhole size={16} /></span></div>
-        <label className="field-label" htmlFor="aes-plaintext">Plaintext</label><textarea id="aes-plaintext" rows="5" value={plaintext} onChange={(e) => setPlaintext(e.target.value)} placeholder="Type a message. Unicode is supported — for example, नमस्ते 🔐" />
-        <label className="field-label" htmlFor="aes-password">Passphrase</label><div className="password-field"><input id="aes-password" type={visible ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Choose a passphrase" autoComplete="new-password" /><button aria-label={visible ? 'Hide passphrase' : 'Show passphrase'} onClick={() => setVisible(!visible)}>{visible ? <EyeOff size={16} /> : <Eye size={16} />}</button></div>
-        <div className="helper-text">Your passphrase is used to derive a 128-bit key with PBKDF2-HMAC-SHA-256. It is never stored.</div>
-        <button className="button-primary wide-button" disabled={busy} onClick={runEncrypt}>{busy ? 'Encrypting…' : <><LockKeyhole size={16} /> Encrypt with AES-128-GCM</>}</button>
+        <label className="field-label" htmlFor="des-plaintext">Plaintext</label><textarea id="des-plaintext" rows="5" value={plaintext} onChange={(e) => setPlaintext(e.target.value)} placeholder="Type a message. Unicode is supported — for example, नमस्ते 🔐" />
+        <label className="field-label" htmlFor="des-password">Passphrase</label><div className="password-field"><input id="des-password" type={visible ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Choose a passphrase" autoComplete="new-password" /><button aria-label={visible ? 'Hide passphrase' : 'Show passphrase'} onClick={() => setVisible(!visible)}>{visible ? <EyeOff size={16} /> : <Eye size={16} />}</button></div>
+        <div className="helper-text">PBKDF2-HMAC-SHA-256 derives separate DES and HMAC keys from the passphrase and a fresh random salt.</div>
+        <button className="button-primary wide-button" disabled={busy} onClick={runEncrypt}>{busy ? 'Encrypting…' : <><LockKeyhole size={16} /> Encrypt with DES-CBC</>}</button>
         {payload && <OutputBox label="ENCRYPTED PAYLOAD · COPY THE ENTIRE VALUE" value={payload} />}
       </> : <><div className="panel-title"><div><span className="eyebrow">DECRYPT A PAYLOAD</span><h2>Recover your text</h2></div><span className="small-lock"><UnlockKeyhole size={16} /></span></div>
-        <label className="field-label" htmlFor="aes-payload">Encrypted payload</label><textarea id="aes-payload" rows="6" value={payload} onChange={(e) => setPayload(e.target.value)} placeholder="Paste the complete CLT1: payload here…" />
-        <label className="field-label" htmlFor="aes-password-decrypt">Passphrase</label><div className="password-field"><input id="aes-password-decrypt" type={visible ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter the original passphrase" autoComplete="current-password" /><button aria-label={visible ? 'Hide passphrase' : 'Show passphrase'} onClick={() => setVisible(!visible)}>{visible ? <EyeOff size={16} /> : <Eye size={16} />}</button></div>
+        <label className="field-label" htmlFor="des-payload">Encrypted payload</label><textarea id="des-payload" rows="6" value={payload} onChange={(e) => setPayload(e.target.value)} placeholder="Paste the complete DES1: payload here…" />
+        <label className="field-label" htmlFor="des-password-decrypt">Passphrase</label><div className="password-field"><input id="des-password-decrypt" type={visible ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter the original passphrase" autoComplete="current-password" /><button aria-label={visible ? 'Hide passphrase' : 'Show passphrase'} onClick={() => setVisible(!visible)}>{visible ? <EyeOff size={16} /> : <Eye size={16} />}</button></div>
         <button className="button-primary wide-button" disabled={busy} onClick={runDecrypt}>{busy ? 'Verifying…' : <><UnlockKeyhole size={16} /> Decrypt and verify</>}</button>
         {recovered && <OutputBox label="RECOVERED PLAINTEXT" value={recovered} />}
       </>}
       <Status type="error">{error}</Status><Status>{success}</Status>
     </div>
-    <div className="payload-note"><span className="eyebrow">PAYLOAD FORMAT</span><p><code>CLT1:</code> version prefix + Base64 URL-safe JSON containing the KDF name, iteration count, random salt, GCM nonce, ciphertext, and authentication tag. Keep the passphrase separate from the payload.</p></div>
+    <div className="payload-note"><span className="eyebrow">PAYLOAD AND ALGORITHM</span><p><code>DES1:</code> marks a URL-safe Base64 JSON payload with version, PBKDF2 settings, random salt, CBC IV, ciphertext, and HMAC-SHA-256 tag. DES has 16 Feistel rounds built from permutations and substitutions. CBC needs PKCS#7 padding; the separate HMAC is checked before padding is removed. Keep the passphrase separate. DES is obsolete and must never be used for real protection.</p></div>
   </div>
 }
 
@@ -396,7 +396,7 @@ function RSADemoPage() {
 function LearningPage() {
   return <div className="page-content"><PageHeader eyebrow="REFERENCE / CONCEPTS" title="How the algorithms work" description="A short guide to the cryptographic ideas used throughout this toolkit." icon={BookOpen} />
     <div className="learning-grid"><article className="panel learning-card"><div className="eyebrow">01 · CLASSICAL</div><h2>Caesar Cipher</h2><p>A monoalphabetic substitution shifts each English letter by the same key. For a shift of 3, A becomes D and X wraps to A.</p><div className="formula-line">E(x) = (x + k) mod 26</div><div className="formula-line">D(x) = (x − k) mod 26</div><p className="muted">Only 26 shifts exist, so it offers no meaningful security.</p></article>
-      <article className="panel learning-card"><div className="eyebrow">02 · SYMMETRIC</div><h2>AES-128-GCM</h2><p>AES uses the same secret key to encrypt and decrypt. GCM also produces an authentication tag that detects wrong passphrases or altered data.</p><div className="formula-line">Passphrase → PBKDF2-HMAC-SHA-256 → 128-bit key</div><p className="muted">A fresh salt and unique random nonce are stored with each ciphertext payload.</p></article>
+      <article className="panel learning-card"><div className="eyebrow">02 · HISTORICAL SYMMETRIC</div><h2>DES-CBC</h2><p>DES is a 64-bit block cipher with 16 Feistel rounds. CBC combines each block with the previous one; PKCS#7 padding fills the final block. The demo uses an HMAC check before decryption.</p><div className="formula-line">Passphrase → PBKDF2-HMAC-SHA-256 → DES key + HMAC key</div><p className="muted">DES has only 56 effective key bits and is obsolete. This demonstration is not suitable for protecting real information.</p></article>
       <article className="panel learning-card"><div className="eyebrow">03 · ASYMMETRIC</div><h2>RSA-OAEP</h2><p>The public key can be shared for encryption; the matching private key decrypts. OAEP adds randomized padding, and SHA-256 is used as its hash.</p><div className="formula-line">Maximum bytes = k − 2 × hLen − 2</div><p className="muted">RSA is for short messages. Larger systems usually combine public-key and symmetric encryption.</p></article></div>
     <div className="note-panel"><ShieldCheck size={18} /><p>This toolkit demonstrates common techniques using PyCryptodome. It is intended for education, not as a production key-management system.</p></div>
   </div>
@@ -404,16 +404,16 @@ function LearningPage() {
 
 function ComparisonPage() {
   const rows = [
-    ['Type', 'Classical substitution', 'Symmetric authenticated encryption', 'Asymmetric public-key encryption'],
-    ['Key material', 'Integer shift, 0–25', '128-bit key derived from passphrase', 'RSA public and private key pair'],
+    ['Type', 'Classical substitution', 'Historical symmetric block cipher', 'Asymmetric public-key encryption'],
+    ['Key material', 'Integer shift, 0–25', 'Password-derived DES and HMAC keys', 'RSA public and private key pair'],
     ['Who can decrypt?', 'Anyone who knows the shift', 'Anyone who knows the passphrase', 'Holder of the matching private key'],
-    ['Message size', 'Any text', 'Any text supported by AES-GCM', 'Short messages only; OAEP has a size limit'],
-    ['Integrity check', 'No', 'Yes, through the GCM tag', 'OAEP padding validation'],
-    ['Security in practice', 'Insecure; learning only', 'Modern when keys and nonces are managed correctly', 'Modern padding for short-message demonstrations'],
+    ['Message size', 'Any text', 'Any text (PKCS#7 block padding)', 'Short messages only; OAEP has a size limit'],
+    ['Integrity check', 'No', 'Yes, through a separate HMAC-SHA-256 tag', 'OAEP padding validation'],
+    ['Security in practice', 'Insecure; learning only', 'Obsolete and insecure; learning only', 'Modern padding for short-message demonstrations'],
     ['Toolkit output', 'Readable shifted characters', 'Versioned Base64-compatible payload', 'Base64 ciphertext'],
   ]
   return <div className="page-content"><PageHeader eyebrow="REFERENCE / SIDE BY SIDE" title="Algorithm Comparison" description="Compare the building blocks and trade-offs of the three working algorithms." icon={ArrowDownUp} />
-    <div className="panel comparison-panel"><div className="table-scroll"><table><thead><tr><th>PROPERTY</th><th>CAESAR CIPHER</th><th>AES-128-GCM</th><th>RSA-OAEP · SHA-256</th></tr></thead><tbody>{rows.map((row) => <tr key={row[0]}>{row.map((cell, i) => i === 0 ? <th key={cell}>{cell}</th> : <td key={cell}>{cell}</td>)}</tr>)}</tbody></table></div></div>
+    <div className="panel comparison-panel"><div className="table-scroll"><table><thead><tr><th>PROPERTY</th><th>CAESAR CIPHER</th><th>DES-CBC + HMAC</th><th>RSA-OAEP · SHA-256</th></tr></thead><tbody>{rows.map((row) => <tr key={row[0]}>{row.map((cell, i) => i === 0 ? <th key={cell}>{cell}</th> : <td key={cell}>{cell}</td>)}</tr>)}</tbody></table></div></div>
     <div className="note-panel"><BookOpen size={18} /><p>The numerical RSA demonstration is separate from this comparison and uses tiny values only to teach modular arithmetic.</p></div>
   </div>
 }

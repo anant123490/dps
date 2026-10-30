@@ -13,9 +13,9 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, StrictInt
 
-from src import aes_cipher, caesar_cipher, rsa_cipher, rsa_demo
+from src import caesar_cipher, des_cipher, rsa_cipher, rsa_demo
 
-app = FastAPI(title="Cryptography Learning Toolkit API", description="Educational Caesar, AES-128-GCM, and RSA-OAEP operations.", version="1.0.0")
+app = FastAPI(title="Cryptography Learning Toolkit API", description="Educational Caesar, DES-CBC, and RSA-OAEP operations.", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -38,7 +38,7 @@ class CaesarRequest(BaseModel):
     shift: StrictInt
 
 
-class AESRequest(BaseModel):
+class DESRequest(BaseModel):
     plaintext: str = ""
     payload: str = ""
     password: str
@@ -99,18 +99,18 @@ def caesar_decrypt(request: CaesarRequest) -> dict[str, str]:
         raise _bad_request(error) from error
 
 
-@app.post("/api/aes/encrypt")
-def aes_encrypt(request: AESRequest) -> dict[str, str]:
+@app.post("/api/des/encrypt")
+def des_encrypt(request: DESRequest) -> dict[str, str]:
     try:
-        return {"payload": aes_cipher.encrypt(request.plaintext, request.password)}
+        return {"payload": des_cipher.encrypt(request.plaintext, request.password)}
     except ValueError as error:
         raise _bad_request(error) from error
 
 
-@app.post("/api/aes/decrypt")
-def aes_decrypt(request: AESRequest) -> dict[str, str]:
+@app.post("/api/des/decrypt")
+def des_decrypt(request: DESRequest) -> dict[str, str]:
     try:
-        return {"plaintext": aes_cipher.decrypt(request.payload, request.password)}
+        return {"plaintext": des_cipher.decrypt(request.payload, request.password)}
     except ValueError as error:
         raise _bad_request(error) from error
 
